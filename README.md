@@ -61,6 +61,8 @@ npm run dev              # http://localhost:3000
 
 Three layers, each doing a different job (see `SPEC.md` §4). The registry lives in `sources.py` and is a **living artifact** — feeds were RSS-verified on 2026-06-09; prune dead ones and add new outlets as found. The pillar keyword lists at the top of `pipeline.py` are the other living artifact: misses come from missing keywords, not missing outlets.
 
+The web view's **Sources & methodology** tab renders a snapshot of this registry. After editing `sources.py`, regenerate it with `python sources.py --json > web/app/methodology/sources.json`.
+
 <!-- SOURCES:BEGIN (generated from sources.py) -->
 
 **171 feeds total** — 39 States Newsroom + 131 newspapers/outlets + 1 trade press.

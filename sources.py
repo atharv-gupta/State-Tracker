@@ -304,3 +304,25 @@ def all_feeds():
             yield state, o["name"], o["feed_url"], "newspaper"
     for o in NATIONAL_FEEDS:
         yield None, o["name"], o["feed_url"], "trade-press"
+
+
+if __name__ == "__main__":
+    # `python sources.py --json > web/app/methodology/sources.json`
+    # regenerates the snapshot the web Sources & Methodology page renders.
+    import json
+    import sys
+
+    if "--json" in sys.argv:
+        json.dump(
+            {
+                "verified": "2026-06-09",
+                "statenewsroom": STATENEWSROOM_FEEDS,
+                "newspapers": NEWSPAPER_FEEDS,
+                "national": NATIONAL_FEEDS,
+            },
+            sys.stdout,
+            indent=2,
+        )
+        sys.stdout.write("\n")
+    else:
+        print(f"{sum(1 for _ in all_feeds())} feeds; use --json for the registry")

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import usa from "@svg-maps/usa";
+import Header from "./header";
 
 const STATE_NAMES = Object.fromEntries(usa.locations.map((l) => [l.id.toUpperCase(), l.name]));
 
@@ -104,10 +105,7 @@ export default function Home() {
 
   return (
     <main className="wrap">
-      <header className="head">
-        <h1>State Activity Tracker</h1>
-        <p className="sub">What state governments are actually doing, in RAF&apos;s pillars</p>
-      </header>
+      <Header active="map" />
 
       <section className="top">
         <div className="mapcard">

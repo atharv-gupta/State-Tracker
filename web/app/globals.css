@@ -37,6 +37,34 @@ h1 {
   font-size: 13.5px;
 }
 
+.tabs {
+  margin-left: auto;
+  display: flex;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.tab {
+  padding: 5px 14px;
+  font-size: 13px;
+  color: #475569;
+  text-decoration: none;
+  border-right: 1px solid #e2e8f0;
+}
+.tab:last-child {
+  border-right: none;
+}
+.tab:hover {
+  background: #f1f5f9;
+}
+.tab.on {
+  background: #0f172a;
+  color: #fff;
+  font-weight: 600;
+}
+
 /* ---------- top: map + filter panel ---------- */
 
 .top {
@@ -310,6 +338,101 @@ h1 {
   text-align: center;
   color: #64748b;
   padding: 40px 0;
+}
+
+/* ---------- methodology page ---------- */
+
+.method {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 760px;
+}
+
+.msec {
+  padding: 18px 22px;
+}
+
+.msec h2 {
+  margin: 0 0 10px;
+  font-size: 17px;
+  letter-spacing: -0.01em;
+}
+
+.msec h3 {
+  margin: 22px 0 4px;
+  font-size: 14px;
+}
+
+.msec p,
+.msec li {
+  font-size: 13.5px;
+  color: #334155;
+  line-height: 1.55;
+}
+
+.msec p {
+  margin: 0 0 10px;
+}
+
+.msec a {
+  color: #2563eb;
+  text-decoration: none;
+}
+.msec a:hover {
+  text-decoration: underline;
+}
+
+.muted {
+  color: #64748b;
+}
+
+.pillarlist {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.steps {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.srctable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin: 6px 0 4px;
+}
+
+.srctable th {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #94a3b8;
+  padding: 6px 10px 6px 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.srctable td {
+  padding: 6px 10px 6px 0;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+  vertical-align: top;
+}
+
+.srctable td:first-child {
+  white-space: nowrap;
+  font-weight: 600;
+  color: #475569;
 }
 
 /* ---------- responsive ---------- */
