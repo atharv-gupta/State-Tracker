@@ -201,6 +201,17 @@ Output ONLY the JSON object. No markdown fences, no preamble, no trailing text.
 MAX_FEED_PAGES = 30
 
 
+def parse_feed(url):
+    """feedparser catches most errors into .bozo, but raw socket failures
+    (e.g. a CDN dropping the connection, common from CI runner IPs) can
+    still raise — one flaky outlet must never kill the run."""
+    try:
+        return feedparser.parse(url).entries
+    except Exception as e:
+        print(f"  fetch error {url}: {e}")
+        return []
+
+
 def fetch_feed(spec, min_date):
     """Fetch a feed, paging backwards through WordPress-style ?paged=N pages
     until entries are older than min_date. Many outlets expose only the
@@ -208,11 +219,10 @@ def fetch_feed(spec, min_date):
     without pagination a weekly pull misses most of the week. Non-WordPress
     feeds ignore ?paged= and return duplicate entries, which ends the loop."""
     state, name, url, source_type = spec
-    parsed = feedparser.parse(url)
-    if parsed.bozo and not parsed.entries:
-        print(f"  FEED FAILED {name}: {parsed.bozo_exception}")
+    entries = parse_feed(url)
+    if not entries:
+        print(f"  FEED EMPTY/FAILED {name}")
         return spec, []
-    entries = list(parsed.entries)
     seen_links = {e.get("link", "") for e in entries}
     batch = entries
 
@@ -225,7 +235,7 @@ def fetch_feed(spec, min_date):
         if o is None or o < min_date:
             break
         sep = "&" if "?" in url else "?"
-        more = feedparser.parse(f"{url}{sep}paged={page}").entries
+        more = parse_feed(f"{url}{sep}paged={page}")
         fresh = [e for e in more if e.get("link", "") not in seen_links]
         if not fresh:
             break
