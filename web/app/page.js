@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import usa from "@svg-maps/usa";
 import Header from "./header";
 
@@ -19,6 +19,24 @@ const TIME_WINDOWS = [
   { key: "all", label: "All", days: null },
 ];
 
+const PAGE_SIZE = 10;
+
+// e.g. 1 … 4 5 6 … 12 — full list when it's short
+function pagesToShow(current, total) {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const wanted = [...new Set([1, current - 1, current, current + 1, total])]
+    .filter((p) => p >= 1 && p <= total)
+    .sort((a, b) => a - b);
+  const out = [];
+  let prev = 0;
+  for (const p of wanted) {
+    if (p - prev > 1) out.push("…");
+    out.push(p);
+    prev = p;
+  }
+  return out;
+}
+
 function cutoffFor(key) {
   const w = TIME_WINDOWS.find((t) => t.key === key);
   if (!w || !w.days) return null;
@@ -36,6 +54,12 @@ export default function Home() {
   const [actorFilter, setActorFilter] = useState("");
   const [timeFilter, setTimeFilter] = useState("week");
   const [hovered, setHovered] = useState(null);
+  const [page, setPage] = useState(1);
+  const listRef = useRef(null);
+
+  useEffect(() => {
+    setPage(1);
+  }, [stateFilter, pillarFilter, activityFilter, actorFilter, timeFilter]);
 
   useEffect(() => {
     fetch("/api/events")
@@ -76,6 +100,15 @@ export default function Home() {
     () => (stateFilter ? baseFiltered.filter((e) => e.state === stateFilter) : baseFiltered),
     [baseFiltered, stateFilter]
   );
+
+  const totalPages = Math.max(1, Math.ceil(shown.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pageItems = shown.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  const goTo = (n) => {
+    setPage(n);
+    listRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
   const maxCount = Math.max(1, ...Object.values(countsByState));
   const fillFor = (code) => {
@@ -212,8 +245,8 @@ export default function Home() {
 
       {error ? <p className="error">Error loading events: {error}</p> : null}
 
-      <section className="list">
-        {shown.map((e) => (
+      <section className="list" ref={listRef}>
+        {pageItems.map((e) => (
           <article key={e.id} className="card">
             <div className="cardtop">
               <span className="statechip">{e.state}</span>
@@ -244,6 +277,40 @@ export default function Home() {
         ))}
         {events && !shown.length ? <p className="empty">No events match these filters.</p> : null}
       </section>
+
+      {totalPages > 1 ? (
+        <nav className="pager" aria-label="Event list pages">
+          <button className="pagebtn" disabled={safePage === 1} onClick={() => goTo(safePage - 1)}>
+            ← Prev
+          </button>
+          {pagesToShow(safePage, totalPages).map((p, i) =>
+            p === "…" ? (
+              <span key={`gap${i}`} className="pagegap">
+                …
+              </span>
+            ) : (
+              <button
+                key={p}
+                className={`pagebtn num ${p === safePage ? "on" : ""}`}
+                onClick={() => goTo(p)}
+              >
+                {p}
+              </button>
+            )
+          )}
+          <button
+            className="pagebtn"
+            disabled={safePage === totalPages}
+            onClick={() => goTo(safePage + 1)}
+          >
+            Next →
+          </button>
+          <span className="pageinfo">
+            {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, shown.length)} of{" "}
+            {shown.length}
+          </span>
+        </nav>
+      ) : null}
     </main>
   );
 }
