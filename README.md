@@ -46,9 +46,9 @@ cp ../.env  .env.local   # or create .env.local with AIRTABLE_TOKEN + AIRTABLE_B
 npm run dev              # http://localhost:3000
 ```
 
-## Weekly automation
+## Automation
 
-`.github/workflows/weekly.yml` runs ingest + dedupe every Monday 13:00 UTC (~7am MT), and can be triggered manually from the Actions tab. To activate, add the three repo secrets on GitHub: **Settings → Secrets and variables → Actions → New repository secret** for `ANTHROPIC_API_KEY`, `AIRTABLE_TOKEN`, `AIRTABLE_BASE_ID`.
+`.github/workflows/weekly.yml` runs the ingest every day at 13:00 UTC (~7am MT) — daily because 90+ feeds retain less than a week of items (see Known gaps) — and additionally runs dedupe on Mondays. It can be triggered manually from the Actions tab (with an opt-in checkbox to also dedupe). To activate, add the three repo secrets on GitHub: **Settings → Secrets and variables → Actions → New repository secret** for `ANTHROPIC_API_KEY`, `AIRTABLE_TOKEN`, `AIRTABLE_BASE_ID`.
 
 ## Deploying the web view (Vercel)
 
@@ -177,7 +177,7 @@ Complementary coverage per state; the only layer covering the 11 states with no 
 
 ### Known gaps & gotchas
 
-- **Feed retention:** 94 of 171 feeds hold less than 7 days of history. WordPress feeds are paginated backwards automatically; non-WordPress short feeds (public radio, Arc-platform papers) can still lose items between weekly runs. Running the ingest daily (dedupe stays weekly) closes this — a one-line cron change in `weekly.yml`.
+- **Feed retention:** ~95 of 171 feeds hold less than 7 days of history. WordPress feeds are paginated backwards automatically; non-WordPress short feeds (public radio, Arc-platform papers, ~44 feeds) ignore pagination and would lose items between weekly runs — which is why the ingest runs daily (dedupe stays weekly).
 - **Indiana** has only one verified complementary outlet (most Indiana papers are Gannett, which removed RSS).
 - **StateScoop** retains only ~10 items (~a week of their publishing volume).
 - `phase0.py` is the original single-feed prototype (Google News query approach) — superseded, kept for reference. The Google News index layer is the planned Phase 1 completeness guarantee.

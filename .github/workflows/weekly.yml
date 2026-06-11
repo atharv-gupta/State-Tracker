@@ -1,9 +1,14 @@
-name: Weekly tracker run
+name: Tracker run
 
 on:
   schedule:
-    - cron: "0 13 * * 1"   # Mondays 13:00 UTC (~7am MT)
-  workflow_dispatch: {}     # manual trigger from the Actions tab
+    - cron: "0 13 * * *"   # daily 13:00 UTC (~7am MT): ingest; Mondays also dedupe
+  workflow_dispatch:        # manual trigger from the Actions tab
+    inputs:
+      dedupe:
+        description: "Also run dedupe after ingest"
+        type: boolean
+        default: false
 
 jobs:
   run:
@@ -20,7 +25,11 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           AIRTABLE_TOKEN: ${{ secrets.AIRTABLE_TOKEN }}
           AIRTABLE_BASE_ID: ${{ secrets.AIRTABLE_BASE_ID }}
-      - name: Dedupe into Events
+      - name: Check day of week
+        id: day
+        run: echo "dow=$(date -u +%u)" >> "$GITHUB_OUTPUT"
+      - name: Dedupe into Events (Mondays, or manual opt-in)
+        if: (github.event_name == 'schedule' && steps.day.outputs.dow == '1') || (github.event_name == 'workflow_dispatch' && inputs.dedupe)
         run: python dedupe.py --days 7
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
