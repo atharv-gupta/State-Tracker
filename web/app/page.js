@@ -14,6 +14,10 @@ const COMPETENCIES = [
 ];
 const COMPETENCY_COLOR = Object.fromEntries(COMPETENCIES.map((c) => [c.key, c.color]));
 
+// The four competencies are what's selected by default. Events that fit none of
+// them (competency === "none") are hidden unless the "Show other activity" box is on.
+const DEFAULT_COMPETENCIES = COMPETENCIES.map((c) => c.key);
+
 // Sector tags describe the policy area (often on "none" events); capacity tags
 // describe the machinery. We tint the two differently in the UI.
 const SECTOR_TAGS = new Set([
@@ -57,7 +61,8 @@ export default function Home() {
   const [events, setEvents] = useState(null);
   const [error, setError] = useState(null);
   const [stateFilter, setStateFilter] = useState(null);
-  const [competencyFilter, setCompetencyFilter] = useState(new Set());
+  const [competencyFilter, setCompetencyFilter] = useState(() => new Set(DEFAULT_COMPETENCIES));
+  const [showOther, setShowOther] = useState(false);
   const [topicFilter, setTopicFilter] = useState("");
   const [activityFilter, setActivityFilter] = useState("");
   const [actorFilter, setActorFilter] = useState("");
@@ -68,7 +73,7 @@ export default function Home() {
 
   useEffect(() => {
     setPage(1);
-  }, [stateFilter, competencyFilter, topicFilter, activityFilter, actorFilter, timeFilter]);
+  }, [stateFilter, competencyFilter, showOther, topicFilter, activityFilter, actorFilter, timeFilter]);
 
   useEffect(() => {
     fetch("/api/events")
@@ -100,13 +105,18 @@ export default function Home() {
     const cutoff = cutoffFor(timeFilter);
     return events.filter((e) => {
       if (cutoff && (!e.date || e.date < cutoff)) return false;
-      if (competencyFilter.size && !competencyFilter.has(e.competency)) return false;
+      const comps = e.competency || [];
+      if (comps.length === 0) {
+        if (!showOther) return false;
+      } else if (competencyFilter.size && !comps.some((c) => competencyFilter.has(c))) {
+        return false;
+      }
       if (topicFilter && !(e.topic_tags || []).includes(topicFilter)) return false;
       if (activityFilter && e.activity_type !== activityFilter) return false;
       if (actorFilter && e.actor_type !== actorFilter) return false;
       return true;
     });
-  }, [events, competencyFilter, topicFilter, activityFilter, actorFilter, timeFilter]);
+  }, [events, competencyFilter, showOther, topicFilter, activityFilter, actorFilter, timeFilter]);
 
   const countsByState = useMemo(() => {
     const c = {};
@@ -145,16 +155,22 @@ export default function Home() {
 
   const clearAll = () => {
     setStateFilter(null);
-    setCompetencyFilter(new Set());
+    setCompetencyFilter(new Set(DEFAULT_COMPETENCIES));
+    setShowOther(false);
     setTopicFilter("");
     setActivityFilter("");
     setActorFilter("");
     setTimeFilter("week");
   };
 
+  const competencyIsDefault =
+    !showOther &&
+    competencyFilter.size === DEFAULT_COMPETENCIES.length &&
+    DEFAULT_COMPETENCIES.every((k) => competencyFilter.has(k));
+
   const hasFilters =
     stateFilter ||
-    competencyFilter.size ||
+    !competencyIsDefault ||
     topicFilter ||
     activityFilter ||
     actorFilter ||
@@ -227,6 +243,14 @@ export default function Home() {
                 </button>
               ))}
             </div>
+            <label className="checkrow">
+              <input
+                type="checkbox"
+                checked={showOther}
+                onChange={(e) => setShowOther(e.target.checked)}
+              />
+              Show other activity
+            </label>
           </div>
 
           <div className="panelrow">
@@ -289,14 +313,15 @@ export default function Home() {
               <time>{e.date}</time>
               {e.activity_type ? <span className="chip">{e.activity_type}</span> : null}
               {e.actor_type ? <span className="chip actor">{e.actor_type}</span> : null}
-              {e.competency && e.competency !== "none" ? (
+              {(e.competency || []).map((c) => (
                 <span
+                  key={c}
                   className="chip pillar"
-                  style={{ "--c": COMPETENCY_COLOR[e.competency] || "#64748b" }}
+                  style={{ "--c": COMPETENCY_COLOR[c] || "#64748b" }}
                 >
-                  {e.competency}
+                  {c}
                 </span>
-              ) : null}
+              ))}
               {e.relevance ? (
                 <span className="sig" title={`Relevance ${e.relevance}/3`}>
                   {"●".repeat(e.relevance)}

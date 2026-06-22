@@ -150,8 +150,10 @@ REQUIRED_FIELDS = [
      "options": {"choices": [{"name": p} for p in PILLAR_CHOICES]}},
     # competency / relevance / topic_tags are written per-EVENT by dedupe.py
     # (clean "Events" table); declared here so the schema-of-record stays complete.
-    {"name": "competency", "type": "singleSelect",
-     "options": {"choices": [{"name": p} for p in PILLAR_CHOICES]}},
+    # competency is multi-valued (an event can be e.g. both digital + incentives);
+    # "none" is the empty list, so it's not a choice. Mirrors dedupe.COMPETENCY_CHOICES.
+    {"name": "competency", "type": "multipleSelects",
+     "options": {"choices": [{"name": p} for p in PILLAR_CHOICES if p != "none"]}},
     {"name": "topic_tags", "type": "multipleSelects",
      "options": {"choices": [{"name": t} for t in TOPIC_TAG_CHOICES]}},
     {"name": "relevance", "type": "number", "options": {"precision": 0}},

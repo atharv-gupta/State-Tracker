@@ -3,10 +3,13 @@
 You classify a single state-government **event** (already deduped and confirmed to be a
 real government action). Your job is fit, not provenance. For each event, output:
 
-1. **competency** — exactly one of `civil-service`, `procedure`, `digital`, `incentives`,
-   or `none`.
-2. **relevance** — 1–3, how *central an example* of that competency this is (see scale).
-   `none` events get no score.
+1. **competencies** — zero or more of `civil-service`, `procedure`, `digital`, `incentives`.
+   Most events match none of them — that is expected; return an empty list. Usually an event
+   fits exactly one. Assign **two** only when the action is genuinely, substantially about both —
+   e.g. legislative **oversight of a failing benefits/IT system** is both `digital` (the system)
+   and `incentives` (the oversight). Do not pad the list; a second competency must stand on its own.
+2. **relevance** — 1–3, how *central an example* of those competencies this is (see scale); for a
+   two-competency event, score the stronger fit. Events that match no competency get no score.
 3. **topic_tags** — one or more descriptive tags (independent of competency).
 
 ## Principle 1: capacity, not subject matter
@@ -37,7 +40,7 @@ happens to add a form is `none`, not `procedure`).
 - **3** — Textbook example of this competency's subject (advancing it *or* undermining it).
 - **2** — Clearly an instance, but partial, indirect, or one piece of a larger thing.
 - **1** — Loosely related; at the edge of the definition.
-- **none** — Fits no competency. No score.
+- **(empty)** — Fits no competency. Return an empty list; no score.
 
 ---
 
@@ -99,18 +102,24 @@ and owner of technology.
 governing the **government's own** use and governance of IT, AI, and data: how state agencies
 may use AI, how the state handles data, the state's AI-governance framework, IT
 reorg/consolidation/outsourcing, product-vs-project moves, and an agency using AI to do its own
-work.
+work. **Data-privacy and AI-governance laws count whenever they reach the government's own
+technology, systems, or data** — e.g. a state AI-governance/transparency act that sets how state
+agencies may deploy AI, or a data-privacy law that constrains how the state collects, stores, or
+shares the data it holds — **even when the same law also regulates private actors**. If the law
+touches the state's own systems or data at all, it counts as `digital`.
 
-**Does NOT count** (subject mismatch): regulation aimed at the **private sector** — consumer
-chatbot-disclosure mandates, AI rules for private healthcare providers, company-only data-privacy
-laws; data-center siting/tax/energy/ratepayer policy (economic development & utilities); ed-tech
-procurement for schools and universities.
+**Does NOT count** (subject mismatch): regulation aimed **only** at the **private sector** with no
+bearing on the government's own systems — consumer chatbot-disclosure mandates, AI rules for
+private healthcare providers, purely company-facing data-privacy laws; data-center
+siting/tax/energy/ratepayer policy (economic development & utilities); ed-tech procurement for
+schools and universities.
 
-**Test:** does the action govern how *government* builds, buys, uses, or oversees technology and
-data? → counts. Does it regulate technology in the private economy? → `none`.
-*Consequence to note:* a purely consumer/company data-privacy law is `none`; a law setting how
-state agencies use AI or handle their data is `digital`. (This flips a couple of the privacy
-rows you'd earlier marked digital — confirm you're comfortable with that.)
+**Test:** does the action govern or affect how *government* builds, buys, uses, or oversees its own
+technology and data? → counts. Does it regulate technology **purely** in the private economy,
+leaving the state's own systems untouched? → not `digital`.
+*Consequence to note:* a data-privacy or AI-governance law that constrains how the **state** handles
+its own data or deploys AI is `digital` (even if it also binds private companies); only a purely
+consumer/company law with no reach into government systems falls outside `digital`.
 
 **Fit:** 3 = a clear move on the government's own tech operating model (IT reorg, outsourcing,
 consolidated service portal, smart-buyer build-out). 1 = tech-adjacent but peripheral.
@@ -131,7 +140,9 @@ habits that reward following up on existing laws as much as passing new ones.
 outcome-contingent funding, test-and-learn pilots, accountability/transparency dashboards,
 oversight reform, legislative follow-up on existing law — or, negatively, oversight that punishes
 reasonable judgment or funding rigid enough to forbid experimentation. (Oversight lives here; it
-is not a separate pillar.)
+is not a separate pillar.) **When oversight targets the government's own technology, data, or
+benefits systems** — e.g. a committee grilling an agency over a failed IT or benefits platform —
+tag **both** `incentives` (the oversight/learning loop) **and** `digital` (the system itself).
 
 **Does NOT count** (subject mismatch): passing a substantive new mandate; a routine compliance
 audit that only checks the box.
@@ -170,6 +181,6 @@ competencies.
 ## Output (JSON only, no fences)
 
 ```json
-{ "competency": "digital", "relevance": 3, "topic_tags": ["it-modernization", "procurement"] }
+{ "competencies": ["digital", "incentives"], "relevance": 3, "topic_tags": ["it-modernization", "transparency"] }
 ```
-For a non-fit: `{ "competency": "none", "relevance": 0, "topic_tags": ["data-center", "tax-incentives"] }`
+For a non-fit: `{ "competencies": [], "relevance": 0, "topic_tags": ["data-center", "tax-incentives"] }`

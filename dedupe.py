@@ -45,8 +45,9 @@ with open(RUBRIC_PATH, encoding="utf-8") as _fh:
     RUBRIC = _fh.read()
 
 # Competency is a SINGLE value per event (was multi-select "pillars"); "none" is a
-# real, common outcome — most government actions fit no internal-capacity competency.
-PILLAR_CHOICES = ["civil-service", "procedure", "digital", "incentives", "none"]
+# An event may match more than one (e.g. oversight of a failing IT system is both
+# digital + incentives). Matching NONE is the common case — stored as an empty list.
+COMPETENCY_CHOICES = ["civil-service", "procedure", "digital", "incentives"]
 # Descriptive topic tags, independent of competency (rubric.md "Topic tags").
 TOPIC_TAG_CHOICES = [
     # capacity tags
@@ -77,8 +78,8 @@ CLEAN_FIELDS = [
     {"name": "event_id", "type": "singleLineText"},
     {"name": "date", "type": "date", "options": {"dateFormat": {"name": "iso"}}},
     {"name": "state", "type": "singleLineText"},
-    {"name": "competency", "type": "singleSelect",
-     "options": {"choices": [{"name": p} for p in PILLAR_CHOICES]}},
+    {"name": "competency", "type": "multipleSelects",
+     "options": {"choices": [{"name": p} for p in COMPETENCY_CHOICES]}},
     {"name": "relevance", "type": "number", "options": {"precision": 0}},
     {"name": "topic_tags", "type": "multipleSelects",
      "options": {"choices": [{"name": t} for t in TOPIC_TAG_CHOICES]}},
@@ -175,11 +176,11 @@ def cluster_state(client, state, rows):
 def classify_event(client, event):
     """Classify ONE synthesized event against rubric.md.
 
-    Returns {"competency", "relevance", "topic_tags"}. rubric.md is sent as the
-    cached system prompt (identical across every call, so it caches), and the
-    synthesized event fields go in the user message. Runs over EVERY event —
-    including single-article ones, which skip the clustering call but still need
-    a competency/relevance/tags read.
+    Returns {"competencies": [...], "relevance", "topic_tags"}. competencies is a
+    list of zero or more (empty = fits none). rubric.md is sent as the cached
+    system prompt (identical across every call, so it caches), and the synthesized
+    event fields go in the user message. Runs over EVERY event — including
+    single-article ones, which skip the clustering call but still need a read.
     """
     payload = {
         "name": event.get("name", ""),
@@ -231,11 +232,15 @@ def build_event_row(state, ev, members):
     }
 
     # Classification (from classify_event, attached to ev before this call).
-    comp = ev.get("competency") or "none"
-    row["competency"] = comp if comp in PILLAR_CHOICES else "none"
+    # competency is a list of zero or more; empty list = fits none of the four.
+    comps = ev.get("competencies") or []
+    if isinstance(comps, str):
+        comps = [comps]
+    comps = [c for c in comps if c in COMPETENCY_CHOICES]
+    row["competency"] = comps
 
-    # relevance 1-3, replacing the old 1-5 significance; "none" events get no score.
-    if row["competency"] != "none":
+    # relevance 1-3, replacing the old 1-5 significance; no-competency events get no score.
+    if comps:
         try:
             rel = int(ev.get("relevance") or 0)
             if 1 <= rel <= 3:
@@ -380,7 +385,7 @@ def main():
     print(f"\n{len(rows)} raw articles -> {len(all_events)} events")
 
     # Classify every event against rubric.md — single-article events included.
-    # Mutates each ev in place with competency / relevance / topic_tags.
+    # Mutates each ev in place with competencies / relevance / topic_tags.
     def classify_one(triplet):
         state, ev, _members = triplet
         try:
@@ -389,7 +394,8 @@ def main():
             errors.append(f"classify {state}: {e}")
             print(f"  ERROR classifying {state} — {e}")
             result = {}
-        ev["competency"] = result.get("competency") or "none"
+        comps = result.get("competencies") or []
+        ev["competencies"] = comps if isinstance(comps, list) else [comps]
         ev["relevance"] = result.get("relevance") or 0
         tags = result.get("topic_tags") or []
         ev["topic_tags"] = tags if isinstance(tags, list) else [tags]
@@ -401,7 +407,7 @@ def main():
     if args.dry_run:
         for state, ev, members in sorted(all_events, key=lambda x: (x[0], x[1].get("date", ""))):
             tag = f"x{len(members)}" if len(members) > 1 else "  "
-            comp = ev.get("competency", "none")
+            comp = "+".join(ev.get("competencies", [])) or "none"
             rel = ev.get("relevance") or ""
             tags = ",".join(ev.get("topic_tags", []))
             label = f"[{comp}{(' ' + str(rel)) if rel else ''}]"

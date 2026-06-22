@@ -36,7 +36,7 @@ export async function GET() {
       notes: f.Notes || "",
       date: f.date || "",
       state: f.state || "",
-      competency: f.competency || "none",
+      competency: f.competency || [],
       relevance: f.relevance || 0,
       topic_tags: f.topic_tags || [],
       activity_type: f.activity_type || "",

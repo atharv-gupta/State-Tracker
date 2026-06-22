@@ -97,10 +97,11 @@ export default function Methodology() {
               <strong>De-duplicate &amp; classify.</strong> One government action usually shows up
               across several outlets. A second model pass clusters the articles into distinct events
               (merging every source URL and outlet onto one row — that&apos;s the &ldquo;N articles
-              merged&rdquo; note), then classifies each event against RAF&apos;s rubric: one{" "}
-              <em>competency</em>, a <em>1–3 relevance</em> score for how central an example it is
-              (direction-agnostic — undermining a capacity counts as much as advancing it), and
-              descriptive <em>topic tags</em>.
+              merged&rdquo; note), then classifies each event against RAF&apos;s rubric: its{" "}
+              <em>competencies</em> (zero, one, or — when an action genuinely spans two, like
+              oversight of a failing IT system — both), a <em>1–3 relevance</em> score for how
+              central an example it is (direction-agnostic — undermining a capacity counts as much
+              as advancing it), and descriptive <em>topic tags</em>.
             </li>
             <li>
               <strong>Surface.</strong> Events accumulate week over week and are what you see on
