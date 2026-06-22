@@ -6,12 +6,20 @@ import Header from "./header";
 
 const STATE_NAMES = Object.fromEntries(usa.locations.map((l) => [l.id.toUpperCase(), l.name]));
 
-const PILLARS = [
+const COMPETENCIES = [
+  { key: "civil-service", label: "Civil service", color: "#059669" },
   { key: "procedure", label: "Procedure", color: "#d97706" },
   { key: "digital", label: "Digital", color: "#2563eb" },
-  { key: "civil-service", label: "Civil service", color: "#059669" },
+  { key: "incentives", label: "Incentives", color: "#7c3aed" },
 ];
-const PILLAR_COLOR = Object.fromEntries(PILLARS.map((p) => [p.key, p.color]));
+const COMPETENCY_COLOR = Object.fromEntries(COMPETENCIES.map((c) => [c.key, c.color]));
+
+// Sector tags describe the policy area (often on "none" events); capacity tags
+// describe the machinery. We tint the two differently in the UI.
+const SECTOR_TAGS = new Set([
+  "data-center", "tax-incentives", "energy-utility", "health-human-services",
+  "higher-ed", "k12-education", "child-welfare",
+]);
 
 const TIME_WINDOWS = [
   { key: "week", label: "Week", days: 7 },
@@ -49,7 +57,8 @@ export default function Home() {
   const [events, setEvents] = useState(null);
   const [error, setError] = useState(null);
   const [stateFilter, setStateFilter] = useState(null);
-  const [pillarFilter, setPillarFilter] = useState(new Set());
+  const [competencyFilter, setCompetencyFilter] = useState(new Set());
+  const [topicFilter, setTopicFilter] = useState("");
   const [activityFilter, setActivityFilter] = useState("");
   const [actorFilter, setActorFilter] = useState("");
   const [timeFilter, setTimeFilter] = useState("week");
@@ -59,7 +68,7 @@ export default function Home() {
 
   useEffect(() => {
     setPage(1);
-  }, [stateFilter, pillarFilter, activityFilter, actorFilter, timeFilter]);
+  }, [stateFilter, competencyFilter, topicFilter, activityFilter, actorFilter, timeFilter]);
 
   useEffect(() => {
     fetch("/api/events")
@@ -76,6 +85,14 @@ export default function Home() {
     () => [...new Set((events || []).map((e) => e.actor_type).filter(Boolean))].sort(),
     [events]
   );
+  // Topic tags present in the data, most common first (most "interesting" up top).
+  const topicTags = useMemo(() => {
+    const c = {};
+    for (const e of events || []) for (const t of e.topic_tags || []) c[t] = (c[t] || 0) + 1;
+    return Object.entries(c)
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .map(([t]) => t);
+  }, [events]);
 
   // Everything except the state filter — drives both map shading and the list
   const baseFiltered = useMemo(() => {
@@ -83,12 +100,13 @@ export default function Home() {
     const cutoff = cutoffFor(timeFilter);
     return events.filter((e) => {
       if (cutoff && (!e.date || e.date < cutoff)) return false;
-      if (pillarFilter.size && !e.pillars.some((p) => pillarFilter.has(p))) return false;
+      if (competencyFilter.size && !competencyFilter.has(e.competency)) return false;
+      if (topicFilter && !(e.topic_tags || []).includes(topicFilter)) return false;
       if (activityFilter && e.activity_type !== activityFilter) return false;
       if (actorFilter && e.actor_type !== actorFilter) return false;
       return true;
     });
-  }, [events, pillarFilter, activityFilter, actorFilter, timeFilter]);
+  }, [events, competencyFilter, topicFilter, activityFilter, actorFilter, timeFilter]);
 
   const countsByState = useMemo(() => {
     const c = {};
@@ -119,22 +137,28 @@ export default function Home() {
     return `rgba(37, 99, 235, ${alpha.toFixed(2)})`;
   };
 
-  const togglePillar = (key) => {
-    const next = new Set(pillarFilter);
+  const toggleCompetency = (key) => {
+    const next = new Set(competencyFilter);
     next.has(key) ? next.delete(key) : next.add(key);
-    setPillarFilter(next);
+    setCompetencyFilter(next);
   };
 
   const clearAll = () => {
     setStateFilter(null);
-    setPillarFilter(new Set());
+    setCompetencyFilter(new Set());
+    setTopicFilter("");
     setActivityFilter("");
     setActorFilter("");
     setTimeFilter("week");
   };
 
   const hasFilters =
-    stateFilter || pillarFilter.size || activityFilter || actorFilter || timeFilter !== "week";
+    stateFilter ||
+    competencyFilter.size ||
+    topicFilter ||
+    activityFilter ||
+    actorFilter ||
+    timeFilter !== "week";
 
   return (
     <main className="wrap">
@@ -190,16 +214,16 @@ export default function Home() {
           </div>
 
           <div className="panelrow">
-            <label>Pillars</label>
+            <label>Competency</label>
             <div className="pillarbtns">
-              {PILLARS.map((p) => (
+              {COMPETENCIES.map((c) => (
                 <button
-                  key={p.key}
-                  className={`pill ${pillarFilter.has(p.key) ? "on" : ""}`}
-                  style={{ "--c": p.color }}
-                  onClick={() => togglePillar(p.key)}
+                  key={c.key}
+                  className={`pill ${competencyFilter.has(c.key) ? "on" : ""}`}
+                  style={{ "--c": c.color }}
+                  onClick={() => toggleCompetency(c.key)}
                 >
-                  {p.label}
+                  {c.label}
                 </button>
               ))}
             </div>
@@ -222,6 +246,18 @@ export default function Home() {
             <select value={actorFilter} onChange={(e) => setActorFilter(e.target.value)}>
               <option value="">All</option>
               {actorTypes.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="panelrow">
+            <label>Topic tag</label>
+            <select value={topicFilter} onChange={(e) => setTopicFilter(e.target.value)}>
+              <option value="">All</option>
+              {topicTags.map((t) => (
                 <option key={t} value={t}>
                   {t}
                 </option>
@@ -253,15 +289,38 @@ export default function Home() {
               <time>{e.date}</time>
               {e.activity_type ? <span className="chip">{e.activity_type}</span> : null}
               {e.actor_type ? <span className="chip actor">{e.actor_type}</span> : null}
-              {e.pillars.map((p) => (
-                <span key={p} className="chip pillar" style={{ "--c": PILLAR_COLOR[p] || "#64748b" }}>
-                  {p}
+              {e.competency && e.competency !== "none" ? (
+                <span
+                  className="chip pillar"
+                  style={{ "--c": COMPETENCY_COLOR[e.competency] || "#64748b" }}
+                >
+                  {e.competency}
                 </span>
-              ))}
-              {e.significance ? <span className="sig">{"●".repeat(e.significance)}</span> : null}
+              ) : null}
+              {e.relevance ? (
+                <span className="sig" title={`Relevance ${e.relevance}/3`}>
+                  {"●".repeat(e.relevance)}
+                </span>
+              ) : null}
             </div>
             <h2>{e.name.replace(/^[A-Z]{2} — /, "")}</h2>
             {e.notes ? <p className="notes">{e.notes}</p> : null}
+            {e.topic_tags?.length ? (
+              <div className="tags">
+                {e.topic_tags.map((t) => (
+                  <button
+                    key={t}
+                    className={`tag ${SECTOR_TAGS.has(t) ? "sector" : ""} ${
+                      topicFilter === t ? "on" : ""
+                    }`}
+                    onClick={() => setTopicFilter(topicFilter === t ? "" : t)}
+                    title="Filter by this tag"
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            ) : null}
             <div className="cardfoot">
               {e.gov_actor ? <span className="actor-name">{e.gov_actor}</span> : null}
               <span className="links">

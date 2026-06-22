@@ -1,24 +1,24 @@
 # State Activity Tracker
 
-A weekly, queryable feed of what state governments are actually doing, categorized into RAF's pillars: **procedure** (deproceduralization / regulatory simplification), **digital** (digital & tech transformation), and **civil-service** (civil service & workforce reform).
+A weekly, queryable feed of what state governments are actually doing, classified by which of RAF's four state-capacity competencies it advances or undermines: **civil-service** (workforce — hiring, classification, pay, performance, separation), **procedure** (the government's own process/compliance burden), **digital** (how the state builds, buys, and oversees its own technology and data), and **incentives** (the learning/feedback loop — outcome-tied funding, oversight, evaluation). Most real government actions fit none of the four — that's expected and recorded as `none`.
 
-The pipeline ingests ~170 state-government news feeds, keeps only items that represent real government activity in those pillars, de-duplicates them into distinct *events*, stores everything in Airtable, and surfaces a filterable map view on the web.
+The pipeline ingests ~170 state-government news feeds, keeps only items that represent real government activity touching those capacities, de-duplicates them into distinct *events*, classifies each against RAF's rubric, stores everything in Airtable, and surfaces a filterable map view on the web.
 
 ## How it works
 
 ```
-[Ingest]            [Classify + gate]        [Store raw]      [Dedupe]            [Surface]
-171 RSS feeds  -->  keyword pre-screen  -->  'Raw Events' --> cluster same   -->  'Events' table
-last N days         + 2 LLM gates            one row per     event across         one row per event
-                    (provenance, pillar)     article          outlets (Sonnet)    + web map view
+[Ingest]            [Gate]                   [Store raw]      [Dedupe + classify]   [Surface]
+171 RSS feeds  -->  keyword pre-screen  -->  'Raw Events' --> cluster same      --> 'Events' table
+last N days         + 2 LLM gates            one row per     event, classify        one row per event
+                    (provenance, capacity)   article         vs. rubric (Sonnet)    + web map view
 ```
 
-1. **`pipeline.py`** — fetches every feed in `sources.py` (paging back through WordPress feeds until past the lookback window, since many feeds retain <7 days), keeps items from the last N days, pre-screens with pillar keywords (cheap, before any LLM call), then gates each survivor with Claude Haiku:
+1. **`pipeline.py`** — fetches every feed in `sources.py` (paging back through WordPress feeds until past the lookback window, since many feeds retain <7 days), keeps items from the last N days, pre-screens with competency keywords (cheap, before any LLM call), then gates each survivor with Claude Haiku:
    - **Gate 1 (provenance):** is the underlying activity an action by a *state-level* government actor in their official capacity? Bills, vetoes, EOs, rulemaking, appointments, reorgs, procurement, budgets, program launches, audits. Federal-only, city-only, opinion, campaign coverage, and private lawsuits fail.
-   - **Gate 2 (pillar):** does it touch procedure / digital / civil-service?
-   - Survivors land in the **`Raw Events`** Airtable table, one row per article, tagged with state, pillars, activity type, actor type, and significance (1–5, a ranking — never a drop gate).
-2. **`dedupe.py`** — clusters the window's raw rows (one government action shows up across many outlets) with Claude Sonnet and rebuilds that window of the **`Events`** table: one row per event, all source URLs/outlets merged. Rows outside the window are never touched, so the table accumulates history week over week.
-3. **`web/`** — Next.js app: US map shaded by event count, filters for time window (week / month / all), pillar, activity type, and government actor type, with an event list beneath. Reads Airtable server-side via `/api/events` (the token never reaches the browser).
+   - **Gate 2 (competency):** does it touch one of the four capacities — civil-service / procedure / digital / incentives? (A coarse filter; the final competency is decided per-event in step 2.)
+   - Survivors land in the **`Raw Events`** Airtable table, one row per article, tagged with state, candidate pillar(s), activity type, and actor type.
+2. **`dedupe.py`** — clusters the window's raw rows (one government action shows up across many outlets) with Claude Sonnet, then classifies **every** event against the rubric in **`rubric.md`** (sent as a cached system prompt): exactly one **competency** including `none`, a **1–3 relevance** score for how central an example it is (direction-agnostic — undermining a capacity counts as much as advancing it), and a set of descriptive **topic tags**. It then rebuilds that window of the **`Events`** table: one row per event, all source URLs/outlets merged. Rows outside the window are never touched, so the table accumulates history week over week. Use `--all` to reclassify every raw row and `--clean-table NAME` to build into a side table (e.g. for review before swapping it in).
+3. **`web/`** — Next.js app: US map shaded by event count, filters for time window (week / month / all), competency, topic tag, activity type, and government actor type, with an event list beneath; each event shows its competency, a relevance dot rating, and clickable topic-tag chips. Reads Airtable server-side via `/api/events` (the token never reaches the browser).
 
 ## Setup
 
@@ -59,7 +59,7 @@ npm run dev              # http://localhost:3000
 
 ## Sources
 
-Three layers, each doing a different job (see `SPEC.md` §4). The registry lives in `sources.py` and is a **living artifact** — feeds were RSS-verified on 2026-06-09; prune dead ones and add new outlets as found. The pillar keyword lists at the top of `pipeline.py` are the other living artifact: misses come from missing keywords, not missing outlets.
+Three layers, each doing a different job (see `SPEC.md` §4). The registry lives in `sources.py` and is a **living artifact** — feeds were RSS-verified on 2026-06-09; prune dead ones and add new outlets as found. The competency keyword lists at the top of `pipeline.py` (civil-service, procedure, digital, incentives) are the other living artifact: misses come from missing keywords, not missing outlets.
 
 The web view's **Sources & methodology** tab renders a snapshot of this registry. After editing `sources.py`, regenerate it with `python sources.py --json > web/app/methodology/sources.json`.
 
@@ -184,4 +184,4 @@ Complementary coverage per state; the only layer covering the 11 states with no 
 
 ## Data model
 
-One row per event in `Events`: `Name`, `Notes`, `date`, `state`, `pillars` (multi), `activity_type` (bill-introduced/bill-passed/veto/EO/rulemaking/appointment/reorg/RFP-procurement/budget/program-launch/audit-report), `actor_type` (governor/legislature/state agency/statewide official/board-commission/court/university system), `gov_actor`, `significance` (1–5), `why_it_matters`, `source_urls`, `source_outlets`, `article_count`, `Status`.
+One row per event in `Events`: `Name`, `Notes`, `date`, `state`, `competency` (single — civil-service/procedure/digital/incentives/none), `relevance` (1–3, blank for `none`), `topic_tags` (multi — descriptive themes, independent of competency; see `rubric.md`), `activity_type` (bill-introduced/bill-passed/veto/EO/rulemaking/appointment/reorg/RFP-procurement/budget/program-launch/audit-report), `actor_type` (governor/legislature/state agency/statewide official/board-commission/court/university system), `gov_actor`, `why_it_matters`, `source_urls`, `source_outlets`, `article_count`, `Status`. (The previous `pillars`/`significance` model is preserved in the `old_Events` table.)

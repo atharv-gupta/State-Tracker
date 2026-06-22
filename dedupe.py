@@ -35,10 +35,30 @@ if not all([ANTHROPIC_API_KEY, AIRTABLE_TOKEN, AIRTABLE_BASE_ID]):
 
 RAW_TABLE = "Raw Events"
 CLEAN_TABLE = "Events"
-MODEL = "claude-sonnet-4-6"   # stronger model for the synthesis step
+MODEL = "claude-sonnet-4-6"   # stronger model for synthesis + classification
 WORKERS = 6
 
-PILLAR_CHOICES = ["procedure", "digital", "civil-service"]
+# The classification rubric, loaded once at startup and sent as a cached system
+# prompt on every classify_event call (see classify_event).
+RUBRIC_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "rubric.md")
+with open(RUBRIC_PATH, encoding="utf-8") as _fh:
+    RUBRIC = _fh.read()
+
+# Competency is a SINGLE value per event (was multi-select "pillars"); "none" is a
+# real, common outcome — most government actions fit no internal-capacity competency.
+PILLAR_CHOICES = ["civil-service", "procedure", "digital", "incentives", "none"]
+# Descriptive topic tags, independent of competency (rubric.md "Topic tags").
+TOPIC_TAG_CHOICES = [
+    # capacity tags
+    "it-modernization", "ai", "data-privacy", "cybersecurity", "broadband",
+    "benefits-systems", "procurement", "occupational-licensing", "permitting",
+    "housing-land-use", "regulatory-reform", "hiring-recruitment",
+    "compensation-pensions", "labor-relations", "telework-rto", "layoffs-rif",
+    "reorganization", "transparency", "study-commission",
+    # sector tags
+    "data-center", "tax-incentives", "energy-utility", "health-human-services",
+    "higher-ed", "k12-education", "child-welfare",
+]
 ACTIVITY_TYPE_CHOICES = [
     "bill-introduced", "bill-passed", "veto", "EO", "rulemaking", "appointment",
     "reorg", "RFP/procurement", "budget", "program-launch", "audit/report",
@@ -48,10 +68,42 @@ ACTOR_TYPE_CHOICES = [
     "board/commission", "court", "university system", "other",
 ]
 
+# Schema for the clean events table. Field names must match build_event_row's
+# keys EXACTLY — dedupe writes rows with those keys and no name remapping. Used by
+# ensure_clean_table to create a fresh table (e.g. Events2) or backfill columns.
+CLEAN_FIELDS = [
+    {"name": "Name", "type": "singleLineText"},               # primary field
+    {"name": "Notes", "type": "multilineText"},
+    {"name": "event_id", "type": "singleLineText"},
+    {"name": "date", "type": "date", "options": {"dateFormat": {"name": "iso"}}},
+    {"name": "state", "type": "singleLineText"},
+    {"name": "competency", "type": "singleSelect",
+     "options": {"choices": [{"name": p} for p in PILLAR_CHOICES]}},
+    {"name": "relevance", "type": "number", "options": {"precision": 0}},
+    {"name": "topic_tags", "type": "multipleSelects",
+     "options": {"choices": [{"name": t} for t in TOPIC_TAG_CHOICES]}},
+    {"name": "activity_type", "type": "singleSelect",
+     "options": {"choices": [{"name": a} for a in ACTIVITY_TYPE_CHOICES]}},
+    {"name": "actor_type", "type": "singleSelect",
+     "options": {"choices": [{"name": a} for a in ACTOR_TYPE_CHOICES]}},
+    {"name": "gov_actor", "type": "singleLineText"},
+    {"name": "headline", "type": "multilineText"},
+    {"name": "why_it_matters", "type": "multilineText"},
+    {"name": "source_urls", "type": "multilineText"},
+    {"name": "source_outlets", "type": "singleLineText"},
+    {"name": "source_type", "type": "singleLineText"},        # comma-joined merge
+    {"name": "Status", "type": "singleLineText"},
+    {"name": "article_count", "type": "number", "options": {"precision": 0}},
+]
+
 SYSTEM_PROMPT = f"""You deduplicate rows in a state-government activity tracker.
 You receive a list of articles (rows) about ONE state's government from the
 past week. Multiple rows often describe the SAME underlying government action
-reported by different outlets. Cluster them into distinct EVENTS.
+reported by different outlets. Cluster them into distinct EVENTS and synthesize
+each one.
+
+Your job is clustering + synthesis ONLY. Do NOT judge which capacity an event
+touches or how significant it is — a separate classification step handles that.
 
 Rules:
 - Two rows belong to the same event only if they describe the same underlying
@@ -71,11 +123,9 @@ Output ONLY this JSON (no fences, no preamble):
       "headline": "one-line what happened, best synthesis of the member rows",
       "notes": "1-2 plain sentences: what happened and why it matters for state capacity",
       "date": "YYYY-MM-DD of the government action (earliest credible)",
-      "pillars": ["one or more of: {' | '.join(PILLAR_CHOICES)}"],
       "activity_type": "one of: {' | '.join(ACTIVITY_TYPE_CHOICES)}",
       "gov_actor": "which body/office acted",
       "actor_type": "one of: {' | '.join(ACTOR_TYPE_CHOICES)}",
-      "significance": 3,
       "why_it_matters": "one line for the digest, empty string if none",
       "status": "optional: introduced | enacted | etc., empty string if N/A"
     }}
@@ -104,9 +154,7 @@ def cluster_state(client, state, rows):
         "gov_actor": f.get("gov_actor", ""),
         "activity_type": f.get("activity_type", ""),
         "actor_type": f.get("actor_type", ""),
-        "pillars": f.get("pillars", []),
         "notes": f.get("Notes", ""),
-        "significance": f.get("significance", ""),
         "status": f.get("Status") or f.get("status", ""),
         "outlet": f.get("source_outlets", ""),
         "url": f.get("source_urls", ""),
@@ -124,14 +172,37 @@ def cluster_state(client, state, rows):
     return parse_json_response(resp.content[0].text)["events"]
 
 
-def build_event_row(state, ev, members):
-    pillars = ev.get("pillars") or []
-    if isinstance(pillars, str):
-        pillars = [pillars]
-    pillars = [p for p in pillars if p in PILLAR_CHOICES]
-    if not pillars:
-        pillars = sorted({p for _, f in members for p in f.get("pillars", [])})
+def classify_event(client, event):
+    """Classify ONE synthesized event against rubric.md.
 
+    Returns {"competency", "relevance", "topic_tags"}. rubric.md is sent as the
+    cached system prompt (identical across every call, so it caches), and the
+    synthesized event fields go in the user message. Runs over EVERY event —
+    including single-article ones, which skip the clustering call but still need
+    a competency/relevance/tags read.
+    """
+    payload = {
+        "name": event.get("name", ""),
+        "headline": event.get("headline", ""),
+        "notes": event.get("notes", ""),
+        "activity_type": event.get("activity_type", ""),
+        "gov_actor": event.get("gov_actor", ""),
+        "actor_type": event.get("actor_type", ""),
+    }
+    resp = client.messages.create(
+        model=MODEL,
+        max_tokens=1024,
+        system=[{
+            "type": "text",
+            "text": RUBRIC,
+            "cache_control": {"type": "ephemeral"},
+        }],
+        messages=[{"role": "user", "content": json.dumps(payload)}],
+    )
+    return parse_json_response(resp.content[0].text)
+
+
+def build_event_row(state, ev, members):
     urls, outlets, types = [], [], []
     for _, f in members:
         for u in (f.get("source_urls") or "").splitlines():
@@ -158,8 +229,26 @@ def build_event_row(state, ev, members):
         "source_type": ", ".join(types),
         "article_count": len(members),
     }
-    if pillars:
-        row["pillars"] = pillars
+
+    # Classification (from classify_event, attached to ev before this call).
+    comp = ev.get("competency") or "none"
+    row["competency"] = comp if comp in PILLAR_CHOICES else "none"
+
+    # relevance 1-3, replacing the old 1-5 significance; "none" events get no score.
+    if row["competency"] != "none":
+        try:
+            rel = int(ev.get("relevance") or 0)
+            if 1 <= rel <= 3:
+                row["relevance"] = rel
+        except (TypeError, ValueError):
+            pass
+
+    tags = ev.get("topic_tags") or []
+    if isinstance(tags, str):
+        tags = [tags]
+    tags = [t for t in tags if t in TOPIC_TAG_CHOICES]
+    if tags:
+        row["topic_tags"] = tags
 
     d = ev.get("date", "")
     if len(d) == 10 and d[4] == "-" and d[7] == "-":
@@ -179,33 +268,51 @@ def build_event_row(state, ev, members):
                       if f.get("actor_type") in ACTOR_TYPE_CHOICES), "other")
     row["actor_type"] = actor
 
-    try:
-        sig = int(ev.get("significance") or 0)
-        if 1 <= sig <= 5:
-            row["significance"] = sig
-    except (TypeError, ValueError):
-        pass
-
     return row
+
+
+def ensure_clean_table(base, table_name):
+    """Return the clean events Table, creating it (with CLEAN_FIELDS) if it does
+    not exist, or adding any missing columns if it does. Lets us point dedupe at
+    a fresh table like Events2 for side-by-side review."""
+    existing = next((t for t in base.schema().tables if t.name == table_name), None)
+    if existing is None:
+        created = base.create_table(table_name, fields=CLEAN_FIELDS)
+        print(f"Created Airtable table '{table_name}'")
+        tid = getattr(created, "id", None)
+        return base.table(tid) if tid else base.table(table_name)
+    table = base.table(existing.id)
+    have = {f.name for f in existing.fields}
+    for f in CLEAN_FIELDS:
+        if f["name"] in have:
+            continue
+        opts = f.get("options")
+        table.create_field(f["name"], f["type"], options=opts) if opts \
+            else table.create_field(f["name"], f["type"])
+        print(f"  added field '{f['name']}' to '{table_name}'")
+    return table
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--days", type=int, default=7, help="window in days (default 7)")
+    ap.add_argument("--all", action="store_true",
+                    help="process every raw row, ignoring the date window")
+    ap.add_argument("--clean-table", default=CLEAN_TABLE,
+                    help=f"clean table to (re)build (default {CLEAN_TABLE!r})")
     ap.add_argument("--dry-run", action="store_true", help="show clusters, don't write")
     args = ap.parse_args()
 
-    min_date = (date.today() - timedelta(days=args.days)).isoformat()
+    min_date = "" if args.all else (date.today() - timedelta(days=args.days)).isoformat()
 
     api = Api(AIRTABLE_TOKEN)
     base = api.base(AIRTABLE_BASE_ID)
     schema = base.schema()
     raw = base.table(next(t.id for t in schema.tables if t.name == RAW_TABLE))
-    clean = base.table(next(t.id for t in schema.tables if t.name == CLEAN_TABLE))
 
     rows = [(r["id"], r["fields"]) for r in raw.all()
             if (r["fields"].get("date") or "") >= min_date]
-    print(f"{len(rows)} raw rows since {min_date}")
+    print(f"{len(rows)} raw rows" + (" (all)" if args.all else f" since {min_date}"))
     if not rows:
         return
 
@@ -226,10 +333,9 @@ def main():
                 "headline": f.get("headline", ""),
                 "notes": f.get("Notes", ""),
                 "date": f.get("date", ""),
-                "pillars": f.get("pillars", []),
                 "activity_type": f.get("activity_type", ""),
                 "gov_actor": f.get("gov_actor", ""),
-                "significance": f.get("significance", ""),
+                "actor_type": f.get("actor_type", ""),
                 "why_it_matters": f.get("why_it_matters", ""),
                 "status": f.get("Status") or f.get("status", ""),
             }
@@ -260,10 +366,10 @@ def main():
                 all_events.append((state, {
                     "member_ids": [rid], "headline": f.get("headline", ""),
                     "name": f.get("headline", ""), "notes": f.get("Notes", ""),
-                    "date": f.get("date", ""), "pillars": f.get("pillars", []),
+                    "date": f.get("date", ""),
                     "activity_type": f.get("activity_type", ""),
                     "gov_actor": f.get("gov_actor", ""),
-                    "significance": f.get("significance", ""),
+                    "actor_type": f.get("actor_type", ""),
                     "why_it_matters": f.get("why_it_matters", ""),
                     "status": f.get("Status") or f.get("status", ""),
                 }, [(rid, f)]))
@@ -273,13 +379,38 @@ def main():
 
     print(f"\n{len(rows)} raw articles -> {len(all_events)} events")
 
+    # Classify every event against rubric.md — single-article events included.
+    # Mutates each ev in place with competency / relevance / topic_tags.
+    def classify_one(triplet):
+        state, ev, _members = triplet
+        try:
+            result = classify_event(client, ev)
+        except Exception as e:
+            errors.append(f"classify {state}: {e}")
+            print(f"  ERROR classifying {state} — {e}")
+            result = {}
+        ev["competency"] = result.get("competency") or "none"
+        ev["relevance"] = result.get("relevance") or 0
+        tags = result.get("topic_tags") or []
+        ev["topic_tags"] = tags if isinstance(tags, list) else [tags]
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=WORKERS) as ex:
+        list(ex.map(classify_one, all_events))
+    print(f"Classified {len(all_events)} events against rubric.md")
+
     if args.dry_run:
         for state, ev, members in sorted(all_events, key=lambda x: (x[0], x[1].get("date", ""))):
             tag = f"x{len(members)}" if len(members) > 1 else "  "
-            print(f"  {state} {ev.get('date','??')} {tag} {ev.get('headline','')[:90]}")
+            comp = ev.get("competency", "none")
+            rel = ev.get("relevance") or ""
+            tags = ",".join(ev.get("topic_tags", []))
+            label = f"[{comp}{(' ' + str(rel)) if rel else ''}]"
+            print(f"  {state} {ev.get('date','??')} {tag} {label:>22} {ev.get('headline','')[:70]}"
+                  + (f"  #{tags}" if tags else ""))
         return
 
     # Rebuild the clean table's window: delete clean rows in range, write fresh
+    clean = ensure_clean_table(base, args.clean_table)
     stale = [r["id"] for r in clean.all()
              if (r["fields"].get("date") or "") >= min_date or not r["fields"].get("date")]
     if stale:
@@ -294,7 +425,7 @@ def main():
         except Exception as e:
             errors.append(f"write {state}: {e}")
             print(f"  ERROR writing {state} — {e}")
-    print(f"Wrote {created} events to '{CLEAN_TABLE}'")
+    print(f"Wrote {created} events to '{args.clean_table}'")
 
     if errors:
         print("\n--- ERRORS ---")

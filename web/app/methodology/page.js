@@ -10,19 +10,24 @@ const STATE_NAMES = Object.fromEntries(usa.locations.map((l) => [l.id.toUpperCas
 
 const PILLARS = [
   {
+    label: "Civil service",
+    color: "#059669",
+    desc: "How the state hires, classifies, pays, evaluates, and separates its own workforce — and who holds that authority.",
+  },
+  {
     label: "Procedure",
     color: "#d97706",
-    desc: "Deproceduralization and regulatory simplification — permitting reform, licensing, paperwork reduction, sunset reviews.",
+    desc: "The government's own procedural and compliance burden — permitting, licensing, reporting, paperwork — added to or stripped back.",
   },
   {
     label: "Digital",
     color: "#2563eb",
-    desc: "Digital and tech transformation — modernization of state systems, digital services, data, AI in government.",
+    desc: "How the state builds, buys, staffs, and oversees its own technology and data — IT modernization, AI in government, product vs. project.",
   },
   {
-    label: "Civil service",
-    color: "#059669",
-    desc: "Civil service and workforce reform — hiring, pay, classification, unions, reorganizations, talent.",
+    label: "Incentives",
+    color: "#7c3aed",
+    desc: "The government's learning/feedback loop — outcome-tied funding, oversight, program evaluation, transparency dashboards, follow-up on existing law.",
   },
 ];
 
@@ -44,8 +49,9 @@ export default function Methodology() {
         <section className="card msec">
           <h2>What this is</h2>
           <p>
-            A weekly, queryable feed of what state governments are actually doing, categorized into
-            RAF&apos;s three pillars:
+            A weekly, queryable feed of what state governments are actually doing, classified by
+            which of RAF&apos;s four state-capacity competencies it advances or undermines — with
+            most actions landing outside all four, which is expected:
           </p>
           <ul className="pillarlist">
             {PILLARS.map((p) => (
@@ -73,7 +79,7 @@ export default function Methodology() {
               until it has the past week of articles.
             </li>
             <li>
-              <strong>Pre-screen.</strong> A keyword filter for each pillar drops clearly
+              <strong>Pre-screen.</strong> A keyword filter for each competency drops clearly
               irrelevant articles before any model is involved.
             </li>
             <li>
@@ -82,16 +88,19 @@ export default function Methodology() {
               Federal-only, city-only, opinion, campaign coverage, and private lawsuits fail here.
             </li>
             <li>
-              <strong>Gate 2 — pillar (Claude).</strong> Does it touch procedure, digital, or
-              civil service? Survivors are tagged with state, pillar(s), activity type, actor
-              type, and a 1–5 significance ranking (significance never drops an item — it only
-              ranks it).
+              <strong>Gate 2 — competency (Claude).</strong> Does it touch one of the four
+              capacities — civil service, procedure, digital, or incentives? Survivors carry state,
+              activity type, and actor type into the raw feed; the competency itself is finalized
+              per-event in the next step.
             </li>
             <li>
-              <strong>De-duplicate.</strong> One government action usually shows up across several
-              outlets. A second model pass clusters the week&apos;s articles into distinct events,
-              merging every source URL and outlet onto one row. That&apos;s why events show
-              &ldquo;N articles merged&rdquo;.
+              <strong>De-duplicate &amp; classify.</strong> One government action usually shows up
+              across several outlets. A second model pass clusters the articles into distinct events
+              (merging every source URL and outlet onto one row — that&apos;s the &ldquo;N articles
+              merged&rdquo; note), then classifies each event against RAF&apos;s rubric: one{" "}
+              <em>competency</em>, a <em>1–3 relevance</em> score for how central an example it is
+              (direction-agnostic — undermining a capacity counts as much as advancing it), and
+              descriptive <em>topic tags</em>.
             </li>
             <li>
               <strong>Surface.</strong> Events accumulate week over week and are what you see on

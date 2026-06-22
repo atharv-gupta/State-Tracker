@@ -36,11 +36,12 @@ export async function GET() {
       notes: f.Notes || "",
       date: f.date || "",
       state: f.state || "",
-      pillars: f.pillars || [],
+      competency: f.competency || "none",
+      relevance: f.relevance || 0,
+      topic_tags: f.topic_tags || [],
       activity_type: f.activity_type || "",
       actor_type: f.actor_type || "",
       gov_actor: f.gov_actor || "",
-      significance: f.significance || 0,
       why_it_matters: f.why_it_matters || "",
       status: f.Status || "",
       urls: (f.source_urls || "").split("\n").map((s) => s.trim()).filter(Boolean),
@@ -49,6 +50,7 @@ export async function GET() {
     };
   });
 
-  events.sort((a, b) => (b.date || "").localeCompare(a.date || "") || b.significance - a.significance);
+  // Newest first; within a day, stronger competency fits (higher relevance) first.
+  events.sort((a, b) => (b.date || "").localeCompare(a.date || "") || b.relevance - a.relevance);
   return Response.json({ events });
 }

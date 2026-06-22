@@ -90,6 +90,24 @@ PILLAR_KEYWORDS = {
         "job classification\\w*", "reclassification", "pension reform",
         "workforce development", "hiring reform", "recruitment",
     ],
+    # Incentives for outcomes (rubric.md): the learning/feedback loop — funding,
+    # oversight, and evaluation realigned toward whether programs actually work.
+    # Covers outcome-tied funding, test-and-learn, accountability/transparency
+    # dashboards, oversight, program evaluation, and legislative follow-up.
+    "incentives": [
+        "outcome-based funding", "outcomes-based funding", "performance-based funding",
+        "outcome-contingent", "pay for success", "pay-for-performance",
+        "performance management", "performance metric\\w*", "performance measure\\w*",
+        "key performance indicator\\w*", "performance audit\\w*",
+        "program evaluation", "program review\\w*", "outcome\\w* evaluation",
+        "evidence-based", "data-driven", "results-based", "results-driven",
+        "continuous improvement", "rapid-cycle", "feedback loop", "test-and-learn",
+        "pilot program\\w*", "pilot project\\w*", "innovation fund\\w*",
+        "accountability", "transparency dashboard", "accountability dashboard",
+        "performance dashboard", "public dashboard", "data dashboard",
+        "oversight", "legislative oversight", "oversight reform",
+        "sunset provision\\w*", "measurable outcome\\w*", "track\\w* outcome\\w*",
+    ],
 }
 
 PILLAR_PATTERNS = {
@@ -97,7 +115,21 @@ PILLAR_PATTERNS = {
     for pillar, words in PILLAR_KEYWORDS.items()
 }
 
-PILLAR_CHOICES = ["procedure", "digital", "civil-service"]
+# Competency values (the dedupe stage's classify_event picks exactly one, incl.
+# "none"). Mirrored in dedupe.py:PILLAR_CHOICES — keep the two in sync. The
+# raw-article GATE 2 below screens for the four real capacities (incl. incentives);
+# "none" is never a gate pass — it's only assigned later, per-event, in dedupe.py.
+PILLAR_CHOICES = ["civil-service", "procedure", "digital", "incentives", "none"]
+# Descriptive topic tags (rubric.md). Mirrored in dedupe.py:TOPIC_TAG_CHOICES.
+TOPIC_TAG_CHOICES = [
+    "it-modernization", "ai", "data-privacy", "cybersecurity", "broadband",
+    "benefits-systems", "procurement", "occupational-licensing", "permitting",
+    "housing-land-use", "regulatory-reform", "hiring-recruitment",
+    "compensation-pensions", "labor-relations", "telework-rto", "layoffs-rif",
+    "reorganization", "transparency", "study-commission",
+    "data-center", "tax-incentives", "energy-utility", "health-human-services",
+    "higher-ed", "k12-education", "child-welfare",
+]
 ACTIVITY_TYPE_CHOICES = [
     "bill-introduced", "bill-passed", "veto", "EO", "rulemaking", "appointment",
     "reorg", "RFP/procurement", "budget", "program-launch", "audit/report",
@@ -116,11 +148,17 @@ REQUIRED_FIELDS = [
     {"name": "state", "type": "singleLineText"},
     {"name": "pillars", "type": "multipleSelects",
      "options": {"choices": [{"name": p} for p in PILLAR_CHOICES]}},
+    # competency / relevance / topic_tags are written per-EVENT by dedupe.py
+    # (clean "Events" table); declared here so the schema-of-record stays complete.
+    {"name": "competency", "type": "singleSelect",
+     "options": {"choices": [{"name": p} for p in PILLAR_CHOICES]}},
+    {"name": "topic_tags", "type": "multipleSelects",
+     "options": {"choices": [{"name": t} for t in TOPIC_TAG_CHOICES]}},
+    {"name": "relevance", "type": "number", "options": {"precision": 0}},
     {"name": "activity_type", "type": "singleSelect",
      "options": {"choices": [{"name": a} for a in ACTIVITY_TYPE_CHOICES]}},
     {"name": "gov_actor", "type": "singleLineText"},
     {"name": "headline", "type": "multilineText"},
-    {"name": "significance", "type": "number", "options": {"precision": 0}},
     {"name": "why_it_matters", "type": "multilineText"},
     {"name": "source_urls", "type": "multilineText"},
     {"name": "source_outlets", "type": "singleLineText"},
@@ -153,8 +191,11 @@ GATE 2 — PILLAR: Does it touch at least one of:
   - "procedure"     — Deproceduralization / Regulatory simplification
   - "digital"       — Digital & tech transformation
   - "civil-service" — Civil service & workforce reform
-
-Significance is a 1-5 ranking for digest ordering, not a gate.
+  - "incentives"    — Incentives for outcomes: the government's learning/feedback
+                      loop — outcome-tied funding, oversight reform, program
+                      evaluation, accountability/transparency dashboards,
+                      test-and-learn pilots, legislative follow-up on existing law.
+                      NOT a routine compliance audit or a substantive new mandate.
 
 If BOTH gates pass, output ONLY this JSON object:
 {
@@ -168,7 +209,6 @@ If BOTH gates pass, output ONLY this JSON object:
   "name": "concise title of the action, 5-10 words, no state name, sentence case",
   "headline": "one-line what happened, in your own words",
   "notes": "1-2 plain sentences: what happened and why it matters for state capacity",
-  "significance": 3,
   "why_it_matters": "optional one line for the digest, empty string if none",
   "status": "optional: introduced | enacted | etc., empty string if N/A"
 }
@@ -388,13 +428,6 @@ def build_row(article, verdict, pillars):
 
     actor = verdict.get("actor_type") or ""
     row["actor_type"] = actor if actor in ACTOR_TYPE_CHOICES else "other"
-
-    try:
-        sig = int(verdict.get("significance") or 0)
-        if 1 <= sig <= 5:
-            row["significance"] = sig
-    except (TypeError, ValueError):
-        pass
 
     return row
 
