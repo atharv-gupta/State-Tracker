@@ -1,0 +1,51 @@
+state,governor_site,news_url,rss_url,status,item_selector,title_selector,link_selector,date_selector
+AL,http://governor.alabama.gov,https://governor.alabama.gov/newsroom/,https://governor.alabama.gov/feed/,rss-confirmed,,,,
+AK,http://gov.alaska.gov,https://gov.alaska.gov/media/,https://gov.alaska.gov/feed,rss-confirmed,,,,
+AZ,http://azgovernor.gov,https://azgovernor.gov/newsroom,https://azgovernor.gov/rss.xml,rss-confirmed,,,,
+AR,http://governor.arkansas.gov,https://governor.arkansas.gov/newsroom/,,needs-html-config,div.dce-post-block.elementor-animation-hang,h4.dce-post-title,a,.dce-item.dce-item_date.elementor-repeater-item-bf19003
+CA,https://www.gov.ca.gov/,https://www.gov.ca.gov/newsroom/,https://www.gov.ca.gov/feed/,rss-confirmed,,,,
+CO,http://www.colorado.gov/governor,http://www.colorado.gov/governor,,needs-html-config,article.press-release--teaser,h2.press-release__title,a,.press-release__date
+CT,https://portal.ct.gov/governor,https://portal.ct.gov/governor,,needs-html-config,div.cg-c-lead-story__body.col-md-6,h2.cg-c-lead-story__title.cg-c-lead-story__title--consolidated-lead,a,.cg-c-lead-story__title.cg-c-lead-story__title--consolidated-lead
+DE,http://governor.delaware.gov,https://governor.delaware.gov/press-releases/,,needs-html-config,div.d-flex.flex-column.align-items-start.gap-2,h3,a,time
+FL,http://www.flgov.com,http://www.flgov.com,,needs-html-config,article,"h2, h3",a,time
+GA,https://gov.georgia.gov,https://gov.georgia.gov,https://gov.georgia.gov/rss.xml,rss-confirmed,,,,
+HI,http://governor.hawaii.gov/,http://governor.hawaii.gov/,http://governor.hawaii.gov/feed,rss-confirmed,,,,
+ID,http://gov.idaho.gov,http://gov.idaho.gov,,needs-html-config,article.col-12.col-sm-12.col-md-6,h3.h5.mt-2,a,time
+IL,https://gov.illinois.gov/,https://gov.illinois.gov/,,needs-html-config,article,"h2, h3",a,time
+IN,http://www.in.gov/gov/,http://www.in.gov/gov/,,needs-html-config,article,"h2, h3",a,time
+IA,http://governor.iowa.gov,https://governor.iowa.gov/newsroom,https://governor.iowa.gov/news/all/all/all/rss.xml,rss-confirmed,,,,
+KS,http://governor.kansas.gov,http://governor.kansas.gov,,needs-html-config,article,"h2, h3",a,time
+KY,http://governor.ky.gov/,https://governor.ky.gov/news,,needs-html-config,article,"h2, h3",a,.dateHeader
+LA,https://gov.louisiana.gov/,https://gov.louisiana.gov/,https://gov.louisiana.gov/news/rss,rss-confirmed,,,,
+ME,http://www.maine.gov/governor/,http://www.maine.gov/governor/,,needs-html-config,li,h3.field-content.news-title,a,time
+MD,https://governor.maryland.gov/,https://governor.maryland.gov/news/press-releases,,needs-html-config,div.maryland-listing-item__content,h3,a,time
+MA,http://www.mass.gov/gov,http://www.mass.gov/gov,,needs-html-config,article,"h2, h3",a,time
+MI,http://www.michigan.gov/gov,http://www.michigan.gov/gov,,needs-html-config,article,"h2, h3",a,time
+MN,https://mn.gov/governor/,https://mn.gov/governor/,,needs-html-config,article,"h2, h3",a,time
+MS,http://governor.ms.gov,https://governorreeves.ms.gov/,https://governorreeves.ms.gov/feed/,rss-confirmed,,,,
+MO,http://governor.mo.gov,https://governor.mo.gov/media/press-releases,https://governor.mo.gov/rss.xml,rss-confirmed,,,,
+MT,http://governor.mt.gov,https://governor.mt.gov/newsroom/,,needs-html-config,article,"h2, h3",a,.date
+NE,http://governor.nebraska.gov,https://governor.nebraska.gov/press-releases,https://governor.nebraska.gov/rss.xml,rss-confirmed,,,,
+NV,http://gov.nv.gov,http://gov.nv.gov,,needs-html-config,article,"h2, h3",a,time
+NH,http://governor.nh.gov,http://governor.nh.gov,,needs-html-config,article,"h2, h3",a,time
+NJ,https://www.nj.gov/governor/,https://www.nj.gov/governor/,,needs-html-config,ul.list-inline.p-0.ml-0,a,a,.sonj-updates
+NM,http://www.governor.state.nm.us,http://www.governor.state.nm.us,https://www.governor.state.nm.us/feed/,rss-confirmed,,,,
+NY,https://www.governor.ny.gov/,https://www.governor.ny.gov/news,,needs-html-config,div.content-right,h3.content-title,a,.m-landingHero__date
+NC,https://governor.nc.gov/,https://governor.nc.gov/news/press-releases,https://governor.nc.gov/news/feed,rss-confirmed,,,,
+ND,http://www.governor.nd.gov/,https://www.governor.nd.gov/news,https://www.governor.nd.gov/rss/news,rss-confirmed,,,,
+OH,https://governor.ohio.gov,https://governor.ohio.gov,,needs-html-config,article,"h2, h3",a,time
+OK,http://www.ok.gov/governor/,http://www.ok.gov/governor/,,needs-html-config,main.sok-base,h2.cmp-teaser__title,a,.lastModifiedDate.lastmodifieddate.sok-container.aem-GridColumn.aem-GridColumn--default--12
+OR,https://www.oregon.gov/gov,https://www.oregon.gov/gov,,needs-html-config,article,"h2, h3",a,time
+PA,http://www.pa.gov/governor,http://www.pa.gov/governor,,needs-html-config,div.cmp-card__content-container,h3.cmp-card__content-container__title,a,.cmp-card__content-container__meta-content__date
+RI,http://www.governor.ri.gov,https://governor.ri.gov/press-releases,https://governor.ri.gov/press-releases.xml,rss-confirmed,,,,
+SC,http://governor.sc.gov/,https://governor.sc.gov/news,,needs-html-config,div.card.views-col.col-1,a,a,.views-field.views-field-field-published-date
+SD,http://sd.gov/governor/,http://sd.gov/governor/,,needs-html-config,article,"h2, h3",a,time
+TN,https://www.tn.gov/governor/,https://www.tn.gov/news,,needs-html-config,div.padded,a,a,.date
+TX,http://gov.texas.gov,https://gov.texas.gov/news,https://gov.texas.gov/news/rss,rss-confirmed,,,,
+UT,http://governor.utah.gov,http://governor.utah.gov,https://governor.utah.gov/feed/,rss-confirmed,,,,
+VT,https://governor.vermont.gov/,https://governor.vermont.gov/press_releases,https://governor.vermont.gov/taxonomy/term/3/feed,rss-confirmed,,,,
+VA,https://www.governor.virginia.gov/,https://www.governor.virginia.gov/,,needs-html-config,article,"h2, h3",a,time
+WA,https://governor.wa.gov/,https://governor.wa.gov/news,https://governor.wa.gov/rss.xml,rss-confirmed,,,,
+WV,http://governor.wv.gov,https://governor.wv.gov/news,https://governor.wv.gov/rss.xml,rss-confirmed,,,,
+WI,http://www.wisgov.state.wi.us/,http://www.wisgov.state.wi.us/,,needs-html-config,article,"h2, h3",a,time
+WY,http://governor.wyo.gov,http://governor.wyo.gov,,needs-html-config,article,"h2, h3",a,time
