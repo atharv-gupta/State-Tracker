@@ -9,6 +9,9 @@ export default function Header({ active }) {
         <Link href="/" className={`tab ${active === "map" ? "on" : ""}`}>
           Map
         </Link>
+        <Link href="/states" className={`tab ${active === "states" ? "on" : ""}`}>
+          State profiles
+        </Link>
         <Link href="/methodology" className={`tab ${active === "methodology" ? "on" : ""}`}>
           Sources &amp; methodology
         </Link>

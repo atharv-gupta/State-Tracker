@@ -2,6 +2,10 @@
   box-sizing: border-box;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -540,6 +544,456 @@ h1 {
   color: #475569;
 }
 
+/* table of contents */
+.toc h2 {
+  margin-bottom: 8px;
+}
+.method section[id] {
+  scroll-margin-top: 16px;
+}
+.toclist {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.toclist > li {
+  font-size: 13.5px;
+}
+.toclist a {
+  color: #2563eb;
+  text-decoration: none;
+}
+.toclist a:hover {
+  text-decoration: underline;
+}
+.tocsub {
+  margin: 4px 0 4px;
+  padding-left: 18px;
+  list-style: disc;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.tocsub li {
+  font-size: 12.5px;
+  color: #64748b;
+}
+
+/* state-profiles source blocks */
+.specbucket {
+  scroll-margin-top: 16px;
+}
+.specbucket h3 {
+  margin: 22px 0 2px;
+  font-size: 15px;
+}
+.cadence {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-style: italic;
+}
+.specbucket .srctable td:first-child {
+  white-space: normal;
+  min-width: 130px;
+  color: #0f172a;
+}
+.specbucket .srctable td.defcell {
+  font-weight: 400;
+  color: #475569;
+}
+
+/* ---------- state specs: shared chips ---------- */
+
+.spec-chip {
+  display: inline-block;
+  border: 1.5px solid var(--c);
+  color: var(--c);
+  background: #fff;
+  border-radius: 999px;
+  padding: 1px 9px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.chiprow {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.dash {
+  color: #cbd5e1;
+}
+
+/* map legend */
+.leg {
+  display: inline-flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.legitem {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.legitem i {
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  display: inline-block;
+}
+
+/* ---------- compare table ---------- */
+
+.tablecard {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px;
+  margin-top: 14px;
+}
+.tablehint {
+  font-size: 12.5px;
+  color: #64748b;
+  padding: 2px 4px 10px;
+}
+
+/* bucket switcher above the compare table */
+.buckettabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.bucketbtn {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+}
+.bucketbtn:hover {
+  background: #f1f5f9;
+}
+.bucketbtn.on {
+  background: #0f172a;
+  border-color: #0f172a;
+  color: #fff;
+}
+
+/* active filter chips (persist across buckets) */
+.activefilters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 0 4px 10px;
+}
+.aflabel {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #94a3b8;
+}
+.afchip {
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  color: #1e40af;
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.afchip:hover {
+  background: #dbeafe;
+}
+.plaincell {
+  font-size: 12.5px;
+  color: #0f172a;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.table-scroll {
+  overflow-x: auto;
+}
+.compare {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+.compare th {
+  text-align: left;
+  vertical-align: top;
+  padding: 6px 10px 8px 0;
+  border-bottom: 2px solid #e2e8f0;
+}
+.compare td {
+  padding: 7px 10px 7px 0;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+.sortbtn {
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #475569;
+  cursor: pointer;
+  display: block;
+}
+.sortbtn:hover {
+  color: #0f172a;
+}
+.colfilter {
+  margin-top: 5px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 2px 4px;
+  font-size: 11px;
+  color: #334155;
+  background: #f8fafc;
+  max-width: 130px;
+}
+.selcol {
+  width: 24px;
+  padding-right: 6px;
+}
+.selcol input {
+  accent-color: #2563eb;
+  cursor: pointer;
+}
+.namecell a {
+  color: #0f172a;
+  font-weight: 600;
+  text-decoration: none;
+}
+.namecell a:hover {
+  color: #2563eb;
+  text-decoration: underline;
+}
+.selrow {
+  background: #eff6ff;
+}
+
+/* ---------- side-by-side ---------- */
+
+.sidebyside {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-top: 14px;
+}
+.sbs-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.sbs-head h2 {
+  margin: 0;
+  font-size: 16px;
+}
+.sbs-scroll {
+  overflow-x: auto;
+}
+.sbs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+.sbs-table th,
+.sbs-table td {
+  padding: 7px 12px 7px 0;
+  border-bottom: 1px solid #f1f5f9;
+  text-align: left;
+  vertical-align: top;
+}
+.sbs-table thead th {
+  border-bottom: 2px solid #e2e8f0;
+  font-size: 13px;
+}
+.sbs-table thead a {
+  color: #0f172a;
+  text-decoration: none;
+}
+.sbs-table thead a:hover {
+  text-decoration: underline;
+}
+.sbs-label {
+  color: #64748b;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ---------- profile page ---------- */
+
+.crumbs {
+  margin: 4px 0 12px;
+  font-size: 13px;
+}
+.crumbs a {
+  color: #2563eb;
+  text-decoration: none;
+}
+.crumbs a:hover {
+  text-decoration: underline;
+}
+.profilehead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.profilehead h2 {
+  margin: 0;
+  font-size: 24px;
+  letter-spacing: -0.02em;
+}
+
+.feedcard {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 14px;
+}
+.feedhead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.feedhead h3 {
+  margin: 0 0 6px;
+  font-size: 14px;
+}
+.feedlink {
+  font-size: 12.5px;
+  color: #2563eb;
+  text-decoration: none;
+}
+.feedlist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.feedlist li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+.feedlist time {
+  color: #94a3b8;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.feedname {
+  color: #334155;
+}
+.minichip {
+  font-size: 10.5px;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  padding: 0 7px;
+  color: #64748b;
+  background: #f8fafc;
+}
+
+.specgrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.speccard {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+.speccardhead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 2px solid var(--c);
+  padding-bottom: 7px;
+  margin-bottom: 10px;
+}
+.speccardhead h3 {
+  margin: 0;
+  font-size: 15px;
+  color: var(--c);
+}
+.prov {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  font-size: 11.5px;
+}
+.prov a {
+  color: #2563eb;
+  text-decoration: none;
+}
+.prov a:hover {
+  text-decoration: underline;
+}
+.asof {
+  color: #94a3b8;
+}
+.specdl {
+  margin: 0;
+}
+.specrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 5px 0;
+  border-bottom: 1px solid #f8fafc;
+}
+.specrow dt {
+  font-size: 12.5px;
+  color: #64748b;
+}
+.specrow dd {
+  margin: 0;
+  text-align: right;
+}
+.plainval {
+  font-size: 13px;
+  color: #0f172a;
+  font-weight: 600;
+}
+.specnotes {
+  margin-top: 9px;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 8px;
+}
+.specnotes p {
+  margin: 0 0 5px;
+  font-size: 12.5px;
+  color: #475569;
+  line-height: 1.5;
+}
+.notelabel {
+  font-weight: 700;
+  color: #64748b;
+}
+
 /* ---------- responsive ---------- */
 
 @media (max-width: 760px) {
@@ -548,5 +1002,8 @@ h1 {
   }
   .mapcard svg {
     max-height: 36vh;
+  }
+  .specgrid {
+    grid-template-columns: 1fr;
   }
 }

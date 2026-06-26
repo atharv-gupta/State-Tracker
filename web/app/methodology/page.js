@@ -31,6 +31,70 @@ const PILLARS = [
   },
 ];
 
+// Table-of-contents entries — each maps to a section/heading id below.
+const TOC = [
+  { id: "about", label: "What this is" },
+  { id: "how", label: "How events get here" },
+  { id: "feed-sources", label: "News-feed sources" },
+  { id: "gaps", label: "Known gaps" },
+  {
+    id: "profiles",
+    label: "State profiles — data & sources",
+    children: [
+      { id: "p-basic", label: "Basic" },
+      { id: "p-civil", label: "Civil service" },
+      { id: "p-digital", label: "Digital" },
+      { id: "p-procedure", label: "Procedure (APA)" },
+    ],
+  },
+];
+
+// Static reference layer (State profiles tab). One block per bucket; mirrors
+// static-state-specs.md §3–§4. Each metric carries its named primary source.
+const SPEC_BUCKETS = [
+  {
+    id: "p-basic",
+    title: "Basic",
+    color: "#0f172a",
+    cadence: "Volatile — checked quarterly and after elections.",
+    rows: [
+      ["Trifecta", "Single party holding governorship + both chambers, else Divided.", "Ballotpedia — State government trifectas", "https://ballotpedia.org/State_government_trifectas"],
+      ["Governor (name & party)", "Current sitting officeholder.", "National Governors Association / Ballotpedia", "https://www.nga.org/governors/"],
+      ["Term limit, eligibility, next election", "Constitutional limit type; where the current governor sits; year of next race.", "NCSL gubernatorial term-limits table / Ballotpedia", "https://www.ncsl.org/elections-and-campaigns/the-term-limited-states"],
+      ["Partisan lean", "Red / Purple / Blue. Locked rule: Purple iff |2024 presidential margin| < 4.0 points (divided government ignored); otherwise Red/Blue by direction. The numeric basis is stored per state.", "2024 presidential margins (Cook PVI / state election authorities)", "https://www.cookpolitical.com/cook-pvi"],
+    ],
+  },
+  {
+    id: "p-civil",
+    title: "Civil service",
+    color: "#059669",
+    cadence: "Stable — annual or on-event.",
+    rows: [
+      ["Collective bargaining", "Three-way: duty to bargain / permits voluntary / prohibits-or-no-provision. Class carve-outs (e.g. police & fire only) noted per state.", "Ballotpedia — Public-sector union policy (NM PELRB / CEPR as statutory backup)", "https://ballotpedia.org/Public-sector_union_policy_in_the_United_States"],
+      ["HR authority model & merit protection", "Centralized vs. decentralized HR authority; merit-protected vs. largely at-will workforce. Pulled from NAPA Summary Table 1.", "NAPA × Niskanen — State HR Practices & Benchmarking (2026)", "https://napawash.org/academy-studies/state-hr-policies"],
+    ],
+  },
+  {
+    id: "p-digital",
+    title: "Digital",
+    color: "#2563eb",
+    cadence: "Volatile — checked quarterly.",
+    rows: [
+      ["AI leadership", "Four-way: named CAIO/AI lead / standing AI office / council-or-task-force only / none formal.", "Government Technology AI Tracker; Code for America Government AI Landscape (2026)", "https://www.govtech.com/artificial-intelligence"],
+      ["Digital service team", "Whether the state has an in-house digital service team (user-centered research/design + agile product mgmt + data-driven practice).", "Beeck Center DST Tracker / Digital Government Network", "https://digitalgovernmenthub.org/publications/the-state-of-state-digital-transformation/"],
+    ],
+  },
+  {
+    id: "p-procedure",
+    title: "Procedure (APA)",
+    color: "#d97706",
+    cadence: "Stable — 2022 vintage; post-2022 statutory changes flagged for manual re-check.",
+    rows: [
+      ["Rulemaking form, executive/legislative/independent-agency review, impact analysis, periodic review", "Six categories derived from each state's Administrative Procedure Act, extracted directly from the paper's appendix tables A-1–A-6.", "Mercatus — A 50-State Review of Regulatory Procedures (Baugus, Bose & Broughel, 2022)", "https://www.mercatus.org/research/working-papers/50-state-review-regulatory-procedures"],
+    ],
+  },
+];
+
 function siteOf(feedUrl) {
   return new URL(feedUrl).origin;
 }
@@ -46,7 +110,27 @@ export default function Methodology() {
       <Header active="methodology" />
 
       <div className="method">
-        <section className="card msec">
+        <nav className="card msec toc" aria-label="On this page">
+          <h2>On this page</h2>
+          <ol className="toclist">
+            {TOC.map((t) => (
+              <li key={t.id}>
+                <a href={`#${t.id}`}>{t.label}</a>
+                {t.children ? (
+                  <ol className="tocsub">
+                    {t.children.map((c) => (
+                      <li key={c.id}>
+                        <a href={`#${c.id}`}>{c.label}</a>
+                      </li>
+                    ))}
+                  </ol>
+                ) : null}
+              </li>
+            ))}
+          </ol>
+        </nav>
+
+        <section className="card msec" id="about">
           <h2>What this is</h2>
           <p>
             A weekly, queryable feed of what state governments are actually doing, classified by
@@ -70,7 +154,7 @@ export default function Methodology() {
           </p>
         </section>
 
-        <section className="card msec">
+        <section className="card msec" id="how">
           <h2>How events get here</h2>
           <ol className="steps">
             <li>
@@ -110,8 +194,8 @@ export default function Methodology() {
           </ol>
         </section>
 
-        <section className="card msec">
-          <h2>Sources</h2>
+        <section className="card msec" id="feed-sources">
+          <h2>News-feed sources</h2>
           <p>
             <strong>{total} feeds</strong> in three layers, each doing a different job:{" "}
             {newsroomStates.length} States Newsroom outlets + {newspaperCount} newspapers and
@@ -191,7 +275,7 @@ export default function Methodology() {
           </ul>
         </section>
 
-        <section className="card msec">
+        <section className="card msec" id="gaps">
           <h2>Known gaps</h2>
           <ul>
             <li>
@@ -210,6 +294,53 @@ export default function Methodology() {
               they are.
             </li>
           </ul>
+        </section>
+
+        <section className="card msec" id="profiles">
+          <h2>State profiles — data &amp; sources</h2>
+          <p>
+            The <strong>State profiles</strong> tab is a static reference layer that sits alongside
+            the live feed: one row per state across 50 states (DC and territories are out of scope
+            for v1). It&apos;s a separate dataset from the news feed — every value is a metric that
+            is comparable across all states and traceable to a single named primary source.
+          </p>
+          <p className="muted">
+            Two rules govern it. <strong>Named primary sources only</strong> — each field is filled
+            from the source named below (or the state&apos;s own statute), never from AI-generated
+            summary sites, which frequently fabricate citations in this subject area. And{" "}
+            <strong>every value carries provenance</strong> — each metric group shows its source
+            link and an &ldquo;as of&rdquo; date inline on the profile card, so you can see how
+            fresh each value is.
+          </p>
+
+          {SPEC_BUCKETS.map((b) => (
+            <div key={b.id} id={b.id} className="specbucket">
+              <h3 style={{ color: b.color }}>{b.title}</h3>
+              <p className="muted cadence">{b.cadence}</p>
+              <table className="srctable">
+                <thead>
+                  <tr>
+                    <th>Metric</th>
+                    <th>What it measures</th>
+                    <th>Source</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {b.rows.map((r) => (
+                    <tr key={r[0]}>
+                      <td>{r[0]}</td>
+                      <td className="defcell">{r[1]}</td>
+                      <td>
+                        <a href={r[3]} target="_blank" rel="noreferrer">
+                          {r[2]}
+                        </a>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))}
         </section>
       </div>
     </main>
