@@ -36,6 +36,13 @@ DIGEST_FROM = os.environ.get("DIGEST_FROM", "onboarding@resend.dev")
 
 EVENTS_TABLE = "Events"
 
+# Public read-only tracker (overridable via env). Linked at the foot of the digest.
+TRACKER_URL = os.environ.get("TRACKER_URL", "https://state-tracker-e2i7.vercel.app/")
+
+# Snippy opener.
+INTRO = ("Here's everything you need to know about what states got up to last week "
+         "in the world of state capacity.")
+
 # §0 pre-DNS constraint: Resend can only deliver to the account's own address
 # until a domain is verified. Do not add other recipients yet — they 403.
 RECIPIENTS = ["atharv@recodingamerica.fund"]
@@ -168,13 +175,14 @@ def meta_line(e: dict) -> str:
 
 
 def render_text(sections: dict[str, list[dict]], total: int, monday: date) -> str:
-    lines = [f"State Capacity Digest — week of {monday.strftime('%b %-d, %Y')}",
-             f"{total} events", ""]
+    lines = [f"State Activity Digest — week of {monday.strftime('%b %-d, %Y')}",
+             f"{total} events", "",
+             INTRO, ""]
     for comp in COMPETENCIES:
         lines.append(f"== {COMPETENCY_LABELS[comp]} ==")
         evs = sections[comp]
         if not evs:
-            lines.append("Nothing notable this week.")
+            lines.append("Nothing notable last week.")
             lines.append("")
             continue
         for e in evs:
@@ -191,6 +199,7 @@ def render_text(sections: dict[str, list[dict]], total: int, monday: date) -> st
                 label = e["source_outlets"][i] if i < len(e["source_outlets"]) else u
                 lines.append(f"  {label}: {u}")
             lines.append("")
+    lines.append(f"See the full tracker: {TRACKER_URL}")
     return "\n".join(lines).rstrip() + "\n"
 
 
@@ -199,10 +208,12 @@ def render_html(sections: dict[str, list[dict]], total: int, monday: date) -> st
             "Helvetica,Arial,sans-serif;color:#0f172a;max-width:640px;"
             "margin:0 auto;padding:8px 4px;")
     out = [f'<div style="{wrap}">']
-    out.append(f'<h1 style="font-size:20px;margin:0 0 2px;">State Capacity Digest</h1>')
-    out.append(f'<p style="color:#64748b;font-size:13px;margin:0 0 18px;">'
+    out.append(f'<h1 style="font-size:20px;margin:0 0 2px;">State Activity Digest</h1>')
+    out.append(f'<p style="color:#64748b;font-size:13px;margin:0 0 14px;">'
                f'Week of {monday.strftime("%b %-d, %Y")} · {total} '
                f'event{"" if total == 1 else "s"}</p>')
+    out.append(f'<p style="font-size:14px;color:#334155;line-height:1.5;margin:0 0 18px;">'
+               f'{escape(INTRO)}</p>')
 
     for comp in COMPETENCIES:
         out.append(f'<h2 style="font-size:15px;border-bottom:2px solid #e2e8f0;'
@@ -211,7 +222,7 @@ def render_html(sections: dict[str, list[dict]], total: int, monday: date) -> st
         evs = sections[comp]
         if not evs:
             out.append('<p style="color:#94a3b8;font-size:13px;margin:0;">'
-                       'Nothing notable this week.</p>')
+                       'Nothing notable last week.</p>')
             continue
         for e in evs:
             title = escape(re.sub(r"^[A-Z]{2} — ", "", e["name"]))
@@ -238,6 +249,10 @@ def render_html(sections: dict[str, list[dict]], total: int, monday: date) -> st
                 out.append(f'<div style="font-size:12px;margin-top:2px;">'
                            f'{" · ".join(links)}</div>')
             out.append('</div>')
+    out.append(f'<p style="border-top:1px solid #e2e8f0;margin-top:24px;'
+               f'padding-top:12px;font-size:13px;">'
+               f'<a href="{escape(TRACKER_URL)}" style="color:#2563eb;'
+               f'text-decoration:none;font-weight:600;">See the full tracker →</a></p>')
     out.append('</div>')
     return "\n".join(out)
 
@@ -294,7 +309,7 @@ def main() -> None:
     sections = select_all(events)
     total = len({e["name"] for evs in sections.values() for e in evs})
     monday = monday_of_this_week()
-    subject = f"State Capacity Digest — week of {monday.strftime('%b %-d, %Y')}: {total} events"
+    subject = f"State Activity Digest — week of {monday.strftime('%b %-d, %Y')}: {total} events"
 
     html = render_html(sections, total, monday)
     text = render_text(sections, total, monday)
@@ -311,7 +326,7 @@ def main() -> None:
                 title = re.sub(r"^[A-Z]{2} — ", "", e["name"])
                 print(f"    {'●' * e['relevance']:<3} {e['state']:<3} {title}")
             if not evs:
-                print("    (nothing notable this week)")
+                print("    (nothing notable last week)")
             print()
         print("--- dry run: no email sent ---")
         return
